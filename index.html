@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="description" content="Wingsweeper: A Minesweeper-style butterfly biodiversity survey grid set in Singapore's parks and reserves.">
+<meta name="theme-color" content="#2d5a1f">
+<title>Wingsweeper: Singapore's Butterfly Grid</title>
+<style>
+/* ============================================================
+   WINGSWEEPER — Tropical field-guide aesthetic
+   ============================================================ */
+
+:root {
+  /* Sunny edge palette */
+  --edge-bg: #d4e8a8;
+  --edge-bg-2: #c8de98;
+  --edge-border: #8bc24a;
+  --edge-text: #3a5a1a;
+
+  /* Shaded interior palette */
+  --shade-bg: #2d4a2a;
+  --shade-bg-2: #345030;
+  --shade-border: #1a3320;
+  --shade-text: #b8d4a8;
+
+  /* UI */
+  --panel-bg: #faf8f0;
+  --panel-border: #c4b890;
+  --accent: #d97706;
+  --accent-light: #fbbf24;
+  --danger: #b91c1c;
+  --danger-light: #fca5a5;
+  --safe: #059669;
+  --safe-light: #6ee7b7;
+  --cryptic: #78350f;
+  --header-bg: #1a3a1a;
+  --header-text: #e8f4d8;
+  --text: #2a2a2a;
+  --text-muted: #6b6b6b;
+
+  /* Hint number colours with shapes for colour-blind safety */
+  --h1: #1e40af;
+  --h2: #047857;
+  --h3: #b45309;
+  --h4: #7c2d12;
+  --h5: #6d28d9;
+  --h6: #0f766e;
+  --h7: #be123c;
+  --h8: #1f2937;
+
+  --cell-size: 40px;
+  --font-scale: 1;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale));
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #1a3a1a 0%, #2d5a2f 50%, #1a3a1a 100%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+/* ---- Header ---- */
+.game-header {
+  width: 100%;
+  background: var(--header-bg);
+  color: var(--header-text);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+.game-header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.game-header h1 .subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--accent-light);
+}
+.header-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.header-btn {
+  background: rgba(255,255,255,0.1);
+  color: var(--header-text);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+.header-btn:hover { background: rgba(255,255,255,0.2); }
+.header-btn.active { background: var(--accent); border-color: var(--accent); }
+
+/* ---- Main layout ---- */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  max-width: 900px;
+  width: 100%;
+  gap: 1rem;
+}
+
+/* ---- Site card ---- */
+.site-card {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.site-card .site-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--edge-text);
+}
+.site-card .site-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+.site-card .site-stats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+.site-card .stat-item {
+  background: #eef4dc;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #c8d4a8;
+}
+.site-card .stat-item strong { color: var(--accent); }
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+.tool-btn {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s;
+  color: var(--text);
+}
+.tool-btn:hover { border-color: var(--accent); }
+.tool-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.tool-btn .icon { font-size: 1rem; }
+.tool-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Grid ---- */
+.grid-wrapper {
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  max-width: 100%;
+  padding: 0.25rem;
+}
+.grid {
+  display: grid;
+  gap: 2px;
+  background: #8bc24a;
+  padding: 4px;
+  border-radius: 6px;
+  border: 3px solid var(--edge-border);
+}
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-size) * 0.45);
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.08s;
+  position: relative;
+}
+.cell:active { transform: scale(0.93); }
+
+/* Unrevealed edge cell */
+.cell.edge-unrevealed {
+  background: linear-gradient(145deg, var(--edge-bg), var(--edge-bg-2));
+  border: 1px solid #9bc85a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+/* Unrevealed shade cell */
+.cell.shade-unrevealed {
+  background: linear-gradient(145deg, var(--shade-bg), var(--shade-bg-2));
+  border: 1px solid var(--shade-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+/* Revealed empty cell */
+.cell.edge-revealed {
+  background: #e8f4d4;
+  border: 1px solid #d0e0a0;
+}
+.cell.shade-revealed {
+  background: #1a2f1a;
+  border: 1px solid #122a12;
+}
+/* Hint number cells */
+.cell.hint {
+  font-weight: 800;
+}
+.cell.hint-1 { color: var(--h1); }
+.cell.hint-2 { color: var(--h2); }
+.cell.hint-3 { color: var(--h3); }
+.cell.hint-4 { color: var(--h4); }
+.cell.hint-5 { color: var(--h5); }
+.cell.hint-6 { color: var(--h6); }
+.cell.hint-7 { color: var(--h7); }
+.cell.hint-8 { color: var(--h8); }
+
+/* Butterfly cell */
+.cell.butterfly {
+  background: linear-gradient(145deg, #fef3c7, #fde68a) !important;
+  border: 1px solid var(--accent) !important;
+  font-size: calc(var(--cell-size) * 0.55);
+}
+/* Cryptic butterfly (looks nearly empty) */
+.cell.cryptic {
+  background: #d4c8a0 !important;
+  border: 1px solid #b0a080 !important;
+}
+.cell.cryptic::after {
+  content: '\00B7'; /* middle dot - barely visible */
+  color: #998870;
+  font-size: calc(var(--cell-size) * 0.3);
+}
+
+/* Flagged cryptic */
+.cell.flag-cryptic {
+  background: #fde68a !important;
+  border: 2px solid var(--accent) !important;
+}
+.cell.flag-cryptic::after {
+  content: '\1F41C'; /* ant emoji as marker */
+  font-size: calc(var(--cell-size) * 0.4);
+}
+/* Flagged extinct */
+.cell.flag-extinct {
+  background: #f3f0e0 !important;
+  border: 2px dashed var(--danger) !important;
+  opacity: 0.6;
+}
+.cell.flag-extinct::after {
+  content: '\00D7'; /* multiplication X */
+  color: var(--danger);
+  font-size: calc(var(--cell-size) * 0.5);
+}
+/* Rediscovered cryptic */
+.cell.rediscovered {
+  background: linear-gradient(145deg, #d1fae5, #a7f3d0) !important;
+  border: 2px solid var(--safe) !important;
+  box-shadow: 0 0 8px var(--safe-light);
+}
+.cell.rediscovered::after {
+  content: '\2728'; /* sparkles */
+  font-size: calc(var(--cell-size) * 0.4);
+}
+
+/* Keyboard cursor */
+.cell.cursor {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+/* Reduced motion */
+body.reduced-motion .cell { transition: none !important; }
+body.reduced-motion .cell:active { transform: none !important; }
+
+/* Colour-blind mode: add text labels to hint shapes */
+body.colour-blind .cell.hint::after {
+  content: attr(data-hint-text);
+  position: absolute;
+  font-size: calc(var(--cell-size) * 0.25);
+  top: 1px;
+  right: 2px;
+  opacity: 0.7;
+}
+
+/* ---- Legend ---- */
+.legend {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  max-width: 600px;
+}
+.legend-item { display: flex; align-items: center; gap: 0.3rem; }
+.legend-swatch {
+  width: 18px; height: 18px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* ---- Scoreboard overlay ---- */
+.overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+.overlay.active { display: flex; }
+.overlay-content {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.overlay-content h2 {
+  color: var(--edge-text);
+  font-size: 1.3rem;
+  margin-bottom: 0.75rem;
+}
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #e0d8c0;
+  font-size: 0.9rem;
+}
+.score-row strong { color: var(--accent); }
+.real-totals {
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  background: #eef4dc;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.real-totals strong { color: var(--edge-text); }
+.closing-note {
+  margin-top: 0.75rem;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--cryptic);
+  line-height: 1.4;
+}
+.overlay-btn {
+  margin-top: 1rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  width: 100%;
+}
+.overlay-btn:hover { background: #c2650a; }
+.overlay-btn.secondary {
+  background: #6b6b6b;
+  margin-top: 0.5rem;
+}
+.overlay-btn.secondary:hover { background: #555; }
+
+/* ---- Codex ---- */
+.codex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.codex-card {
+  background: #f8f4e8;
+  border: 1px solid #d0c8a0;
+  border-radius: 6px;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.7rem;
+}
+.codex-card.discovered {
+  border-color: var(--accent);
+  background: #fefbe8;
+}
+.codex-card.locked {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+.codex-card .butterfly-emoji { font-size: 1.5rem; }
+.codex-card .butterfly-name { font-weight: 700; margin-top: 0.2rem; }
+.codex-card .butterfly-status { color: var(--text-muted); margin-top: 0.15rem; }
+.codex-card .butterfly-source {
+  color: var(--cryptic);
+  margin-top: 0.2rem;
+  font-style: italic;
+}
+
+/* ---- Settings ---- */
+.settings-group { margin-bottom: 0.75rem; }
+.settings-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+}
+.settings-group select,
+.settings-group input[type="range"] {
+  width: 100%;
+  padding: 0.3rem;
+  font-size: 0.8rem;
+}
+.settings-group .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.settings-group .checkbox-row input { width: auto; }
+
+/* ---- Toast / message ---- */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--header-bg);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  display: none;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show { display: block; animation: fadeOut 2.5s forwards; }
+@keyframes fadeOut {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  :root { --cell-size: 32px; }
+  .game-header h1 { font-size: 1rem; }
+  .game-header h1 .subtitle { display: none; }
+  .toolbar { gap: 0.3rem; }
+  .tool-btn { padding: 0.4rem 0.6rem; font-size: 0.75rem; }
+}
+
+@media (max-width: 400px) {
+  :root { --cell-size: 28px; }
+}
+
+/* SR-only */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="game-header" role="banner">
+  <h1>Wingsweeper <span class="subtitle">Singapore's Butterfly Grid</span></h1>
+  <div class="header-controls">
+    <button class="header-btn" id="btn-codex" title="View species codex">Codex</button>
+    <button class="header-btn" id="btn-settings" title="Settings">Settings</button>
+    <button class="header-btn" id="btn-help" title="How to play">Help</button>
+  </div>
+</header>
+
+<!-- ===== MAIN GAME ===== -->
+<main class="game-container" role="main">
+
+  <!-- Site card -->
+  <div class="site-card" id="site-card">
+    <div class="site-name" id="site-name">Dairy Farm Nature Park</div>
+    <div class="site-note" id="site-note" aria-live="polite"></div>
+    <div class="site-stats" id="site-stats"></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar" role="toolbar" aria-label="Survey tools">
+    <button class="tool-btn active" id="tool-reveal" data-tool="reveal" aria-pressed="true">
+      <span class="icon">🔍</span> Reveal
+    </button>
+    <button class="tool-btn" id="tool-cryptic" data-tool="cryptic" aria-pressed="false">
+      <span class="icon">🦋</span> Flag Cryptic
+    </button>
+    <button class="tool-btn" id="tool-extinct" data-tool="extinct" aria-pressed="false">
+      <span class="icon">❌</span> Mark Extinct
+    </button>
+    <button class="tool-btn" id="btn-undo" aria-label="Undo last action" disabled>
+      <span class="icon">↶</span> Undo
+    </button>
+    <button class="tool-btn" id="btn-restart" aria-label="Restart level">
+      <span class="icon">🔄</span> Restart
+    </button>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid-wrapper">
+    <div class="grid" id="grid" role="grid" aria-label="Butterfly survey grid"></div>
+  </div>
+  <div class="sr-only" id="grid-aria-live" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Legend -->
+  <div class="legend" id="legend">
+    <div class="legend-item"><span class="legend-swatch" style="background:var(--edge-bg);">·</span> Sunny edge</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:var(--shade-bg);">·</span> Shaded interior</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#fde68a;border:1px solid var(--accent);">🦋</span> Butterfly</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#d4c8a0;border:1px solid #b0a080;">·</span> Cryptic (dull)</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#fde68a;border:2px solid var(--accent);">🐜</span> Flagged cryptic</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#f3f0e0;border:2px dashed var(--danger);">✕</span> Marked extinct</div>
+    <div class="legend-item"><span class="legend-swatch" style="background:#d1fae5;border:2px solid var(--safe);">✨</span> Rediscovered</div>
+  </div>
+</main>
+
+<!-- ===== SCOREBOARD OVERLAY ===== -->
+<div class="overlay" id="scoreboard-overlay" role="dialog" aria-labelledby="scoreboard-title">
+  <div class="overlay-content">
+    <h2 id="scoreboard-title">Survey Complete</h2>
+    <div id="scoreboard-body"></div>
+    <div class="real-totals" id="real-totals"></div>
+    <div class="closing-note" id="closing-note"></div>
+    <button class="overlay-btn" id="btn-next-site">Next Site →</button>
+    <button class="overlay-btn secondary" id="btn-replay-site">Replay This Site</button>
+  </div>
+</div>
+
+<!-- ===== CODEX OVERLAY ===== -->
+<div class="overlay" id="codex-overlay" role="dialog" aria-labelledby="codex-title">
+  <div class="overlay-content">
+    <h2 id="codex-title">Species Codex</h2>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+      Discover butterflies across Singapore's sites. Each card cites its source.
+    </p>
+    <div class="codex-grid" id="codex-grid"></div>
+    <button class="overlay-btn" id="btn-close-codex">Close</button>
+  </div>
+</div>
+
+<!-- ===== SETTINGS OVERLAY ===== -->
+<div class="overlay" id="settings-overlay" role="dialog" aria-labelledby="settings-title">
+  <div class="overlay-content">
+    <h2 id="settings-title">Settings</h2>
+    <div class="settings-group">
+      <label for="set-gridsize">Grid Size</label>
+      <select id="set-gridsize">
+        <option value="8">Small (8×8)</option>
+        <option value="10" selected>Medium (10×10)</option>
+        <option value="12">Large (12×12)</option>
+        <option value="14">Extra Large (14×14)</option>
+      </select>
+    </div>
+    <div class="settings-group">
+      <label for="set-textsize">Text Size: <span id="textsize-val">100%</span></label>
+      <input type="range" id="set-textsize" min="80" max="150" step="10" value="100">
+    </div>
+    <div class="settings-group">
+      <div class="checkbox-row">
+        <input type="checkbox" id="set-colourblind"><label for="set-colourblind">Colour-blind mode (add labels)</label>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="checkbox-row">
+        <input type="checkbox" id="set-reducedmotion"><label for="set-reducedmotion">Reduced motion</label>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="checkbox-row">
+        <input type="checkbox" id="set-audio" checked><label for="set-audio">Audio cues</label>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="checkbox-row">
+        <input type="checkbox" id="set-easycryptic"><label for="set-easycryptic">Easy cryptic mode (fewer ambiguous cells)</label>
+      </div>
+    </div>
+    <button class="overlay-btn" id="btn-apply-settings">Apply & Restart</button>
+    <button class="overlay-btn secondary" id="btn-close-settings">Close</button>
+  </div>
+</div>
+
+<!-- ===== HELP OVERLAY ===== -->
+<div class="overlay" id="help-overlay" role="dialog" aria-labelledby="help-title">
+  <div class="overlay-content">
+    <h2 id="help-title">How to Play</h2>
+    <div style="font-size:0.85rem;line-height:1.6;">
+      <p><strong>You are a Butterfly Watch volunteer</strong> surveying patches of Singapore habitat.</p>
+      <p style="margin-top:0.5rem;"><strong>Reveal</strong> cells to log butterflies. Number cells show how many butterflies are in the 8 neighbours.</p>
+      <p style="margin-top:0.5rem;"><strong>Start at the sunny edges</strong> — hints cluster there (real surveys found 85 species at edges vs 63 in shade). The dark interior is sparse.</p>
+      <p style="margin-top:0.5rem;"><strong>Cryptic butterflies</strong> look almost like empty cells. Use the <em>Flag Cryptic</em> tool to keep them alive. Use <em>Mark Extinct</em> only if you believe they're gone — wrong extinctions lower your score.</p>
+      <p style="margin-top:0.5rem;"><strong>Rediscovery:</strong> A cell marked extinct may later be found to be a surviving cryptic species — bonus points!</p>
+      <p style="margin-top:0.5rem;"><strong>Keyboard:</strong> Arrow keys to move cursor, Space/Enter to use active tool, F to flag cryptic, X to mark extinct, R to reveal.</p>
+      <p style="margin-top:0.5rem;">Real Singapore totals: <strong>334 extant species, 153 extirpated</strong>. Try to build the fullest record!</p>
+    </div>
+    <button class="overlay-btn" id="btn-close-help" style="margin-top:1rem;">Got it!</button>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   WINGSWEEPER — Game Logic
+   ============================================================ */
+
+// ---- Real Singapore butterfly species data ----
+const SPECIES_DATA = [
+  // Edge-loving common species (sunny margins)
+  { id: 'common_mormon', name: 'Common Mormon', sci: 'Papilio polytes', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'A widespread swallowtail, common in urban parks and gardens across Singapore.', source: 'NParks Butterfly Watch' },
+  { id: 'plain_tiger', name: 'Plain Tiger', sci: 'Danaus chrysippus', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'A milkweed-feeder; its bright colours warn predators of toxicity.', source: 'Khew & Tan 2019' },
+  { id: 'grass_yellows', name: 'Grass Yellows', sci: 'Eurema spp.', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'Several almost identical species; abundant in open grassy areas.', source: 'NParks Butterfly Watch' },
+  { id: 'tawny_coster', name: 'Tawny Coster', sci: 'Acraea terpsicore', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'A recent colonist that spread rapidly through Singapore from the 2000s.', source: 'Jain et al. 2018' },
+  { id: 'lemon_pansy', name: 'Lemon Pansy', sci: 'Junonia lemonias', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'A sun-loving nymphalid common in gardens and open trails.', source: 'NParks Butterfly Watch' },
+  { id: 'peacock_pansy', name: 'Peacock Pansy', sci: 'Junonia almana', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'Prefers open, marshy ground; eyespots on wings startle predators.', source: 'Khew & Tan 2019' },
+  { id: 'blue_pansy', name: 'Blue Pansy', sci: 'Junonia orithya', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'Males flash brilliant blue upperwings in sunny openings.', source: 'NParks Butterfly Watch' },
+  { id: 'chocolate_pansy', name: 'Chocolate Pansy', sci: 'Junonia hedonia', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'Warm brown wings blend with dry grass; common at forest margins.', source: 'Khew & Tan 2019' },
+  { id: 'common_rose', name: 'Common Rose', sci: 'Pachliopta aristolochiae', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'A red-bodied swallowtail; caterpillars feed on Aristolochia vines.', source: 'NParks Butterfly Watch' },
+  { id: 'crowned_bamboo', name: 'Crowned Bamboo', sci: 'Discophora methymasis', emoji: '🦋', status: 'common', habitat: 'edge', fact: 'Flies low along bamboo; eyes blend with dead leaf shadows.', source: 'Khew & Tan 2019' },
+
+  // Forest interior species (shaded)
+  { id: 'common_bluebottle', name: 'Common Bluebottle', sci: 'Graphium sarpedon', emoji: '🦋', status: 'common', habitat: 'interior', fact: 'A fast-flying forest swallowtail with blue-green bands.', source: 'NParks Butterfly Watch' },
+  { id: 'common_jezebel', name: 'Common Jezebel', sci: 'Delias eucharis', emoji: '🦋', status: 'common', habitat: 'interior', fact: 'Bright warning colours signal distasteful chemistry from host plants.', source: 'Khew & Tan 2019' },
+  { id: 'painter_heliconian', name: 'Painted Jezebel', sci: 'Delias hyparete', emoji: '🦋', status: 'uncommon', habitat: 'interior', fact: 'A forest-edge pierid; caterpillars feed on mistletoe.', source: 'Khew & Tan 2019' },
+  { id: 'common_hove', name: 'Common Hove', sci: 'Appias olferna', emoji: '🦋', status: 'common', habitat: 'interior', fact: 'A white pierid of forest clearings; rapid, erratic flight.', source: 'NParks Butterfly Watch' },
+  { id: 'great_orange_tip', name: 'Great Orange Tip', sci: 'Hebomoia glaucippe', emoji: '🦋', status: 'uncommon', habitat: 'interior', fact: 'Large white butterfly with orange forewing tips; flies in the canopy.', source: 'Khew & Tan 2019' },
+  { id: 'common_three_rings', name: 'Common Three Ring', sci: 'Ypthima pandocus', emoji: '🦋', status: 'common', habitat: 'interior', fact: 'A small brown satyrine of shaded trails; cryptic among leaf litter.', source: 'NParks Butterfly Watch' },
+
+  // Cryptic species (dull, hard to detect — the game's tension)
+  { id: 'cryptic_palmfly', name: 'Palmfly', sci: 'Elymnias hypermnestra', emoji: '🦋', status: 'cryptic', habitat: 'both', fact: 'Mimics dead leaves; extremely hard to detect — 6 of 9 recent Singapore losses were cryptic species like this.', source: 'Jain et al. 2018' },
+  { id: 'cryptic_bush_brown', name: 'Bush Brown', sci: 'Mycalesis spp.', emoji: '🦋', status: 'cryptic', habitat: 'interior', fact: 'Small brown butterflies that vanish into forest shade; easily overlooked.', source: 'Khew & Tan 2019' },
+  { id: 'cryptic_flat', name: 'Tree Flats', sci: 'Celaestrina spp.', emoji: '🦋', status: 'cryptic', habitat: 'both', fact: 'Tiny, drab; perch flat on tree trunks. Many historical records are uncertain.', source: 'Jain et al. 2018' },
+  { id: 'cryptic_lascar', name: 'Dull Lascar', sci: 'Pellarge spp.', emoji: '🦋', status: 'cryptic', habitat: 'interior', fact: 'Brown and indistinct; identification requires careful examination.', source: 'Khew & Tan 2019' },
+  { id: 'cryptic_hedge_blue', name: 'Hedge Blue', sci: 'Acytolepis puspa', emoji: '🦋', status: 'cryptic', habitat: 'edge', fact: 'A tiny, near-featureless blue; one of the species at risk of being wrongly declared extinct.', source: 'Jain et al. 2018' },
+  { id: 'cryptic_yeoman', name: 'Yeoman', sci: 'Cirrochroa spp.', emoji: '🦋', status: 'cryptic', habitat: 'interior', fact: 'Orange-brown and camouflaged; rare in shaded interiors.', source: 'Khew & Tan 2019' },
+];
+
+// ---- Singapore sites (levels) ----
+const SITES = [
+  { name: 'Dairy Farm Nature Park', note: 'Open, edge-rich parkland at the foot of Bukit Timah. A good place to start your survey.', speciesRecord: 85, interiorRatio: 0.15, crypticRatio: 0.12 },
+  { name: 'Bukit Timah Buffer', note: 'Where the edge meets the reserve. More shade creeps in here.', speciesRecord: 70, interiorRatio: 0.25, crypticRatio: 0.15 },
+  { name: 'Central Catchment Trail', note: 'A trail cutting into the shaded interior. Rare, shade-dependent species hide here.', speciesRecord: 63, interiorRatio: 0.40, crypticRatio: 0.20 },
+  { name: 'Bukit Timah Reserve', note: 'Primary forest. Only 63 species recorded inside the shade versus 85 at the edges.', speciesRecord: 63, interiorRatio: 0.55, crypticRatio: 0.25 },
+  { name: 'Sungei Buloh Wetland', note: 'Mangrove edge meets coastal forest. Monsoon peaks bring colonists and migrants.', speciesRecord: 75, interiorRatio: 0.35, crypticRatio: 0.22 },
+  { name: 'Lower Pierce Reservoir', note: 'Old secondary forest with deep shade pockets. The cryptic species are harder than ever.', speciesRecord: 60, interiorRatio: 0.60, crypticRatio: 0.30 },
+];
+
+const REAL_EXTANT = 334;
+const REAL_EXTIRPATED = 153;
+
+// ---- Game state ----
+const state = {
+  gridSize: 10,
+  grid: [],         // 2D array of cell objects
+  siteIndex: 0,
+  activeTool: 'reveal',
+  cursor: { r: 0, c: 0 },
+  firstReveal: true,
+  gameOver: false,
+  score: { catalogued: 0, lost: 0, rediscovered: 0, bonus: 0 },
+  undoStack: [],
+  audioEnabled: true,
+  colourBlind: false,
+  reducedMotion: false,
+  easyCryptic: false,
+  textSize: 100,
+  discoveredSpecies: new Set(),
+  // for rediscovery mechanic
+  extinctFlags: new Set(),
+};
+
+// ---- Settings persistence ----
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('wingsweeper_settings') || '{}');
+    if (s.gridSize) state.gridSize = s.gridSize;
+    if (s.audioEnabled !== undefined) state.audioEnabled = s.audioEnabled;
+    if (s.colourBlind !== undefined) state.colourBlind = s.colourBlind;
+    if (s.reducedMotion !== undefined) state.reducedMotion = s.reducedMotion;
+    if (s.easyCryptic !== undefined) state.easyCryptic = s.easyCryptic;
+    if (s.textSize) state.textSize = s.textSize;
+    const disc = JSON.parse(localStorage.getItem('wingsweeper_discovered') || '[]');
+    state.discoveredSpecies = new Set(disc);
+    const si = localStorage.getItem('wingsweeper_site');
+    if (si) state.siteIndex = Math.min(parseInt(si), SITES.length - 1);
+  } catch(e) { console.warn('Settings load failed:', e); }
+}
+
+function saveSettings() {
+  localStorage.setItem('wingsweeper_settings', JSON.stringify({
+    gridSize: state.gridSize,
+    audioEnabled: state.audioEnabled,
+    colourBlind: state.colourBlind,
+    reducedMotion: state.reducedMotion,
+    easyCryptic: state.easyCryptic,
+    textSize: state.textSize,
+  }));
+  localStorage.setItem('wingsweeper_discovered', JSON.stringify([...state.discoveredSpecies]));
+  localStorage.setItem('wingsweeper_site', String(state.siteIndex));
+}
+
+// ---- Audio (synthesised SFX) ----
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  return audioCtx;
+}
+function playSFX(type) {
+  if (!state.audioEnabled) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const now = ctx.currentTime;
+
+  switch(type) {
+    case 'reveal':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.exponentialRampToValueAtTime(784, now + 0.08);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+      break;
+    case 'butterfly':
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(659, now);
+      osc.frequency.exponentialRampToValueAtTime(988, now + 0.12);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      break;
+    case 'cryptic_correct':
+      // Soft confirmation chime (two tones)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(659, now + 0.08);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      // second note
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.type = 'sine'; osc2.frequency.setValueAtTime(784, now + 0.08);
+      gain2.gain.setValueAtTime(0.12, now + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc2.start(now + 0.08); osc2.stop(now + 0.2);
+      break;
+    case 'extinct_wrong':
+      // Low sombre tone
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.5);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+      break;
+    case 'rediscovery':
+      // Bright ascending arpeggio
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(659, now + 0.06);
+      osc.frequency.setValueAtTime(784, now + 0.12);
+      osc.frequency.setValueAtTime(1047, now + 0.18);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25);
+      break;
+    case 'flag':
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(440, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.start(now); osc.stop(now + 0.06);
+      break;
+  }
+}
+
+// ---- Grid generation ----
+function isEdge(r, c, size) {
+  // Edge = within 2 rows/cols of the border (sunny margin)
+  return r < 2 || c < 2 || r >= size - 2 || c >= size - 2;
+}
+
+function getNeighbours(r, c, size) {
+  const result = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < size && nc >= 0 && nc < size) result.push({ r: nr, c: nc });
+    }
+  }
+  return result;
+}
+
+function pickSpecies(habitat, isCryptic) {
+  if (isCryptic) {
+    const cryptic = SPECIES_DATA.filter(s => s.status === 'cryptic');
+    return cryptic[Math.floor(Math.random() * cryptic.length)];
+  }
+  if (habitat === 'edge') {
+    const pool = SPECIES_DATA.filter(s => s.habitat === 'edge' || s.habitat === 'both');
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  const pool = SPECIES_DATA.filter(s => s.habitat === 'interior' || s.habitat === 'both');
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function generateGrid() {
+  const size = state.gridSize;
+  const site = SITES[state.siteIndex];
+  let crypticRatio = site.crypticRatio;
+  if (state.easyCryptic) crypticRatio *= 0.4;
+
+  // Total butterflies: ~18-22% of cells
+  const totalCells = size * size;
+  const butterflyCount = Math.floor(totalCells * (0.18 + state.siteIndex * 0.01));
+  // Cryptic count
+  const crypticCount = Math.floor(butterflyCount * crypticRatio);
+  const normalCount = butterflyCount - crypticCount;
+
+  // Build grid structure
+  state.grid = [];
+  for (let r = 0; r < size; r++) {
+    state.grid[r] = [];
+    for (let c = 0; c < size; c++) {
+      const edge = isEdge(r, c, size);
+      state.grid[r][c] = {
+        r, c,
+        isEdge: edge,
+        isButterfly: false,
+        isCryptic: false,
+        species: null,
+        revealed: false,
+        flag: null,       // null | 'cryptic' | 'extinct'
+        hint: 0,          // count of butterfly neighbours
+        rediscovered: false,
+        markedAbsent: false,  // was marked extinct, can be rediscovered
+      };
+    }
+  }
+
+  // Place butterflies: ~70% on edges (higher density), ~30% interior
+  const edgeCells = [];
+  const interiorCells = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (state.grid[r][c].isEdge) edgeCells.push({r, c});
+      else interiorCells.push({r, c});
+    }
+  }
+
+  // Shuffle helper
+  const shuffle = (arr) => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; };
+
+  shuffle(edgeCells);
+  shuffle(interiorCells);
+
+  let placed = 0;
+  // Place normal butterflies first (70% on edges, 30% interior)
+  const edgeNormals = Math.floor(normalCount * 0.7);
+  const interiorNormals = normalCount - edgeNormals;
+
+  const edgeCryptic = Math.floor(crypticCount * 0.4); // cryptics skew interior
+  const interiorCryptic = crypticCount - edgeCryptic;
+
+  const placeBatch = (cells, count, isCryptic) => {
+    for (let i = 0; i < count && i < cells.length && placed < butterflyCount; i++) {
+      const { r, c } = cells[i];
+      const cell = state.grid[r][c];
+      cell.isButterfly = true;
+      cell.isCryptic = isCryptic;
+      cell.species = pickSpecies(cell.isEdge ? 'edge' : 'interior', isCryptic);
+      placed++;
+    }
+  };
+
+  placeBatch(edgeCells, edgeNormals, false);
+  placeBatch(interiorCells, interiorNormals, false);
+  placeBatch(interiorCells, interiorCryptic, true);
+  placeBatch(edgeCells, edgeCryptic, true);
+
+  // Calculate hints for all non-butterfly cells
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (state.grid[r][c].isButterfly) continue;
+      let count = 0;
+      for (const n of getNeighbours(r, c, size)) {
+        if (state.grid[n.r][n.c].isButterfly) count++;
+      }
+      state.grid[r][c].hint = count;
+    }
+  }
+
+  state.firstReveal = true;
+  state.gameOver = false;
+  state.score = { catalogued: 0, lost: 0, rediscovered: 0, bonus: 0 };
+  state.undoStack = [];
+  state.extinctFlags = new Set();
+}
+
+// ---- Safe first click: ensure the clicked cell and its neighbours are safe ----
+function ensureSafeFirstClick(r, c) {
+  const size = state.gridSize;
+  // Move butterflies away from the clicked cell and its neighbours
+  const safeZone = new Set();
+  safeZone.add(`${r},${c}`);
+  for (const n of getNeighbours(r, c, size)) {
+    safeZone.add(`${n.r},${n.c}`);
+  }
+
+  // Collect displaced butterflies
+  const displaced = [];
+  for (const key of safeZone) {
+    const [sr, sc] = key.split(',').map(Number);
+    const cell = state.grid[sr][sc];
+    if (cell.isButterfly) {
+      displaced.push({ isCryptic: cell.isCryptic, species: cell.species });
+      cell.isButterfly = false;
+      cell.isCryptic = false;
+      cell.species = null;
+    }
+  }
+
+  // Relocate displaced butterflies to random safe (non-safe-zone) cells
+  const availableCells = [];
+  for (let rr = 0; rr < size; rr++) {
+    for (let cc = 0; cc < size; cc++) {
+      if (!safeZone.has(`${rr},${cc}`) && !state.grid[rr][cc].isButterfly) {
+        availableCells.push({r: rr, c: cc});
+      }
+    }
+  }
+
+  for (let i = availableCells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [availableCells[i], availableCells[j]] = [availableCells[j], availableCells[i]];
+  }
+
+  for (let i = 0; i < displaced.length && i < availableCells.length; i++) {
+    const { r: rr, c: cc } = availableCells[i];
+    const cell = state.grid[rr][cc];
+    cell.isButterfly = true;
+    cell.isCryptic = displaced[i].isCryptic;
+    cell.species = displaced[i].species;
+  }
+
+  // Recalculate hints
+  for (let rr = 0; rr < size; rr++) {
+    for (let cc = 0; cc < size; cc++) {
+      if (state.grid[rr][cc].isButterfly) continue;
+      let count = 0;
+      for (const n of getNeighbours(rr, cc, size)) {
+        if (state.grid[n.r][n.c].isButterfly) count++;
+      }
+      state.grid[rr][cc].hint = count;
+    }
+  }
+}
+
+// ---- Reveal logic ----
+function revealCell(r, c, fromUndo) {
+  const cell = state.grid[r][c];
+  if (cell.revealed || state.gameOver) return;
+
+  // If cell is flagged extinct, attempt rediscovery instead of normal reveal
+  if (cell.flag === 'extinct' && !fromUndo) {
+    if (cell.isButterfly && cell.isCryptic && Math.random() < 0.59) {
+      cell.rediscovered = true;
+      cell.flag = null;
+      cell.revealed = true;
+      state.score.rediscovered++;
+      state.score.bonus += 3;
+      state.score.catalogued++;
+      state.score.lost = Math.max(0, state.score.lost - 1);
+      state.discoveredSpecies.add(cell.species.id);
+      state.extinctFlags.delete(`${r},${c}`);
+      playSFX('rediscovery');
+      showToast(`✨ Rediscovery! ${cell.species.name} found alive — bonus +3!`);
+      renderGrid();
+      updateSiteCard();
+      checkWinCondition();
+    } else {
+      showToast('No rediscovery — the species remains marked extinct.');
+    }
+    return;
+  }
+
+  if (cell.flag && !fromUndo) return; // can't reveal flagged cells
+
+  if (state.firstReveal) {
+    ensureSafeFirstClick(r, c);
+    state.firstReveal = false;
+  }
+
+  if (!fromUndo) {
+    state.undoStack.push({ type: 'reveal', r, c });
+    if (state.undoStack.length > 20) state.undoStack.shift();
+  }
+
+  cell.revealed = true;
+
+  if (cell.isButterfly) {
+    if (cell.isCryptic) {
+      // Cryptic butterfly revealed — it was a butterfly hiding in plain sight
+      state.score.catalogued++;
+      state.discoveredSpecies.add(cell.species.id);
+      playSFX('butterfly');
+      showToast(`Logged: ${cell.species.name} (cryptic species found!)`);
+    } else {
+      state.score.catalogued++;
+      state.discoveredSpecies.add(cell.species.id);
+      playSFX('butterfly');
+      showToast(`Logged: ${cell.species.name}`);
+    }
+  } else {
+    playSFX('reveal');
+  }
+
+  // Flood reveal: if hint is 0, reveal neighbours
+  if (!cell.isButterfly && cell.hint === 0) {
+    for (const n of getNeighbours(r, c, state.gridSize)) {
+      revealCell(n.r, n.c, true);
+    }
+  }
+
+  checkWinCondition();
+  renderGrid();
+  updateSiteCard();
+}
+
+// ---- Flag as cryptic ----
+function flagCryptic(r, c) {
+  const cell = state.grid[r][c];
+  if (cell.revealed || state.gameOver) return;
+
+  state.undoStack.push({ type: 'flag', r, c, prevFlag: cell.flag });
+  if (state.undoStack.length > 20) state.undoStack.shift();
+
+  if (cell.flag === 'cryptic') {
+    cell.flag = null;
+  } else {
+    cell.flag = 'cryptic';
+    if (cell.isButterfly && cell.isCryptic) {
+      // Correct flag — keeps species alive
+      state.score.catalogued++;
+      state.discoveredSpecies.add(cell.species.id);
+      playSFX('cryptic_correct');
+      showToast(`Correct! ${cell.species.name} kept in the record.`);
+    } else if (cell.isButterfly && !cell.isCryptic) {
+      // Flagged a normal butterfly as cryptic — still logged but no bonus
+      state.score.catalogued++;
+      state.discoveredSpecies.add(cell.species.id);
+      playSFX('flag');
+      showToast(`Flagged. ${cell.species.name} logged.`);
+    } else {
+      // Empty cell flagged as cryptic — no penalty but no reward
+      playSFX('flag');
+    }
+  }
+
+  checkWinCondition();
+  renderGrid();
+  updateSiteCard();
+}
+
+// ---- Mark extinct ----
+function markExtinct(r, c) {
+  const cell = state.grid[r][c];
+  if (cell.revealed || state.gameOver) return;
+
+  state.undoStack.push({ type: 'extinct', r, c, prevFlag: cell.flag });
+  if (state.undoStack.length > 20) state.undoStack.shift();
+
+  if (cell.flag === 'extinct') {
+    // Unmark
+    cell.flag = null;
+    cell.markedAbsent = false;
+    state.extinctFlags.delete(`${r},${c}`);
+  } else {
+    cell.flag = 'extinct';
+    cell.markedAbsent = true;
+    state.extinctFlags.add(`${r},${c}`);
+
+    if (cell.isButterfly) {
+      // Wrongly declaring a living species extinct — it's lost!
+      state.score.lost++;
+      playSFX('extinct_wrong');
+      showToast(`Wrongly declared extinct! ${cell.species.name} lost from the record.`);
+    } else {
+      playSFX('flag');
+    }
+  }
+
+  checkWinCondition();
+  renderGrid();
+  updateSiteCard();
+}
+
+// ---- Rediscovery: chance for extinct-marked cells to flip ----
+function attemptRediscovery(r, c) {
+  const cell = state.grid[r][c];
+  if (!cell.markedAbsent || cell.rediscovered) return false;
+
+  // 59% chance of rediscovery for cryptic species
+  if (cell.isButterfly && cell.isCryptic && Math.random() < 0.59) {
+    cell.rediscovered = true;
+    cell.flag = null;
+    cell.revealed = true;
+    state.score.rediscovered++;
+    state.score.bonus += 3;
+    state.score.catalogued++;
+    state.discoveredSpecies.add(cell.species.id);
+    playSFX('rediscovery');
+    showToast(`✨ Rediscovery! ${cell.species.name} found alive — bonus +3!`);
+    return true;
+  }
+  return false;
+}
+
+// ---- Undo ----
+function undo() {
+  if (state.undoStack.length === 0 || state.gameOver) return;
+  const action = state.undoStack.pop();
+  const cell = state.grid[action.r][action.c];
+
+  if (action.type === 'reveal') {
+    // Can't un-reveal if flood happened; only undo the single action
+    cell.revealed = false;
+    if (cell.isButterfly) {
+      state.score.catalogued = Math.max(0, state.score.catalogued - 1);
+    }
+  } else if (action.type === 'flag') {
+    if (cell.flag === 'cryptic' && cell.isButterfly) {
+      state.score.catalogued = Math.max(0, state.score.catalogued - 1);
+    }
+    cell.flag = action.prevFlag;
+  } else if (action.type === 'extinct') {
+    if (cell.flag === 'extinct' && cell.isButterfly) {
+      state.score.lost = Math.max(0, state.score.lost - 1);
+    }
+    cell.flag = action.prevFlag;
+    cell.markedAbsent = false;
+    state.extinctFlags.delete(`${action.r},${action.c}`);
+  }
+
+  renderGrid();
+  updateSiteCard();
+  updateUndoButton();
+}
+
+// ---- Win/lose check ----
+function checkWinCondition() {
+  const size = state.gridSize;
+  let allResolved = true;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const cell = state.grid[r][c];
+      if (cell.isButterfly && !cell.revealed && cell.flag !== 'cryptic' && cell.flag !== 'extinct') {
+        allResolved = false;
+        break;
+      }
+      if (!cell.isButterfly && !cell.revealed) {
+        allResolved = false;
+        break;
+      }
+    }
+    if (!allResolved) break;
+  }
+
+  if (allResolved) {
+    state.gameOver = true;
+    setTimeout(showScoreboard, 500);
+  }
+}
+
+// ---- Scoring ----
+function calculateScore() {
+  return state.score.catalogued - state.score.lost + state.score.bonus;
+}
+
+// ---- Rendering ----
+function renderGrid() {
+  const gridEl = document.getElementById('grid');
+  const size = state.gridSize;
+  gridEl.innerHTML = '';
+  gridEl.style.gridTemplateColumns = `repeat(${size}, var(--cell-size))`;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const cell = state.grid[r][c];
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.setAttribute('role', 'gridcell');
+      el.setAttribute('tabindex', '0');
+      el.dataset.r = r;
+      el.dataset.c = c;
+
+      // Determine classes
+      const edgeClass = cell.isEdge ? 'edge' : 'shade';
+
+      if (cell.rediscovered) {
+        el.classList.add('rediscovered');
+      } else if (cell.flag === 'cryptic') {
+        el.classList.add('flag-cryptic');
+      } else if (cell.flag === 'extinct') {
+        el.classList.add('flag-extinct');
+      } else if (cell.revealed) {
+        el.classList.add(edgeClass + '-revealed');
+        if (cell.isButterfly) {
+          if (cell.isCryptic) {
+            el.classList.add('cryptic');
+          } else {
+            el.classList.add('butterfly');
+            el.textContent = '🦋';
+          }
+        } else if (cell.hint > 0) {
+          el.classList.add('hint', `hint-${cell.hint}`);
+          el.textContent = cell.hint;
+          el.setAttribute('data-hint-text', cell.hint);
+        }
+      } else {
+        el.classList.add(edgeClass + '-unrevealed');
+      }
+
+      // Cursor highlight
+      if (state.cursor.r === r && state.cursor.c === c) {
+        el.classList.add('cursor');
+      }
+
+      // ARIA label
+      let ariaLabel = `Row ${r+1}, column ${c+1}. `;
+      if (cell.isEdge) ariaLabel += 'Sunny edge. ';
+      else ariaLabel += 'Shaded interior. ';
+      if (cell.revealed) {
+        if (cell.isButterfly) {
+          ariaLabel += cell.isCryptic ? `Cryptic butterfly: ${cell.species.name}. ` : `Butterfly: ${cell.species.name}. `;
+        } else if (cell.hint > 0) {
+          ariaLabel += `Hint: ${cell.hint} butterflies nearby. `;
+        } else {
+          ariaLabel += 'Empty. ';
+        }
+      } else {
+        if (cell.flag === 'cryptic') ariaLabel += 'Flagged as cryptic. ';
+        else if (cell.flag === 'extinct') ariaLabel += 'Marked extinct. ';
+        else ariaLabel += 'Unrevealed. ';
+      }
+      el.setAttribute('aria-label', ariaLabel);
+
+      // Events
+      el.addEventListener('click', handleCellClick);
+      el.addEventListener('contextmenu', handleRightClick);
+      el.addEventListener('touchstart', handleTouchStart, {passive: false});
+      el.addEventListener('touchend', handleTouchEnd, {passive: false});
+      el.addEventListener('focus', () => {
+        state.cursor = { r, c };
+        document.getElementById('grid-aria-live').textContent = ariaLabel;
+      });
+
+      gridEl.appendChild(el);
+    }
+  }
+}
+
+// ---- Cell interaction ----
+let touchTimer = null;
+let touchTarget = null;
+
+function handleCellClick(e) {
+  const el = e.currentTarget;
+  const r = parseInt(el.dataset.r);
+  const c = parseInt(el.dataset.c);
+  state.cursor = { r, c };
+
+  if (state.activeTool === 'reveal') {
+    revealCell(r, c);
+  } else if (state.activeTool === 'cryptic') {
+    flagCryptic(r, c);
+  } else if (state.activeTool === 'extinct') {
+    markExtinct(r, c);
+  }
+  updateUndoButton();
+}
+
+function handleRightClick(e) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  const r = parseInt(el.dataset.r);
+  const c = parseInt(el.dataset.c);
+  state.cursor = { r, c };
+  // Right-click cycles: cryptic flag
+  flagCryptic(r, c);
+  updateUndoButton();
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  touchTarget = e.currentTarget;
+  const r = parseInt(touchTarget.dataset.r);
+  const c = parseInt(touchTarget.dataset.c);
+  state.cursor = { r, c };
+  // Long press = flag cryptic
+  touchTimer = setTimeout(() => {
+    flagCryptic(r, c);
+    touchTarget = null; // prevent tap action
+    updateUndoButton();
+  }, 500);
+}
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  if (touchTimer) {
+    clearTimeout(touchTimer);
+    touchTimer = null;
+  }
+  if (touchTarget) {
+    const r = parseInt(touchTarget.dataset.r);
+    const c = parseInt(touchTarget.dataset.c);
+    // Short tap
+    if (state.activeTool === 'reveal') {
+      revealCell(r, c);
+    } else if (state.activeTool === 'cryptic') {
+      flagCryptic(r, c);
+    } else if (state.activeTool === 'extinct') {
+      markExtinct(r, c);
+    }
+    touchTarget = null;
+    updateUndoButton();
+  }
+}
+
+// ---- Keyboard navigation ----
+function handleKeyDown(e) {
+  if (state.gameOver) return;
+  const size = state.gridSize;
+  let { r, c } = state.cursor;
+
+  switch(e.key) {
+    case 'ArrowUp':
+      e.preventDefault();
+      r = Math.max(0, r - 1);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      r = Math.min(size - 1, r + 1);
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      c = Math.max(0, c - 1);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      c = Math.min(size - 1, c + 1);
+      break;
+    case ' ':
+    case 'Enter':
+      e.preventDefault();
+      if (state.activeTool === 'reveal') revealCell(r, c);
+      else if (state.activeTool === 'cryptic') flagCryptic(r, c);
+      else if (state.activeTool === 'extinct') markExtinct(r, c);
+      updateUndoButton();
+      return;
+    case 'f':
+    case 'F':
+      e.preventDefault();
+      flagCryptic(r, c);
+      updateUndoButton();
+      return;
+    case 'x':
+    case 'X':
+      e.preventDefault();
+      markExtinct(r, c);
+      updateUndoButton();
+      return;
+    case 'r':
+    case 'R':
+      e.preventDefault();
+      setTool('reveal');
+      return;
+    case 'z':
+    case 'Z':
+      if (e.ctrlKey || e.metaKey) { e.preventDefault(); undo(); }
+      return;
+    default:
+      return;
+  }
+
+  state.cursor = { r, c };
+  renderGrid();
+  // Focus the new cell
+  const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  if (cell) cell.focus();
+}
+
+// ---- Tool selection ----
+function setTool(tool) {
+  state.activeTool = tool;
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tool === tool);
+    btn.setAttribute('aria-pressed', btn.dataset.tool === tool);
+  });
+}
+
+// ---- Update UI ----
+function updateSiteCard() {
+  const site = SITES[state.siteIndex];
+  document.getElementById('site-name').textContent = site.name;
+  document.getElementById('site-note').textContent = site.note;
+  const stats = document.getElementById('site-stats');
+  stats.innerHTML = `
+    <div class="stat-item">Recorded: <strong>${site.speciesRecord}</strong> species</div>
+    <div class="stat-item">Catalogued: <strong>${state.score.catalogued}</strong></div>
+    <div class="stat-item">Lost: <strong>${state.score.lost}</strong></div>
+    <div class="stat-item">Rediscovered: <strong>${state.score.rediscovered}</strong></div>
+    <div class="stat-item">Score: <strong>${calculateScore()}</strong></div>
+  `;
+}
+
+function updateUndoButton() {
+  document.getElementById('btn-undo').disabled = state.undoStack.length === 0 || state.gameOver;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('show');
+  void t.offsetWidth; // restart animation
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ---- Scoreboard ----
+function showScoreboard() {
+  const site = SITES[state.siteIndex];
+
+  // Rediscovery attempts on remaining extinct-flagged cells BEFORE scoring
+  const rediscoveryList = [];
+  for (const key of state.extinctFlags) {
+    const [r, c] = key.split(',').map(Number);
+    const cell = state.grid[r][c];
+    if (cell.markedAbsent && !cell.rediscovered) {
+      // 59% chance of rediscovery for cryptic species
+      if (cell.isButterfly && cell.isCryptic && Math.random() < 0.59) {
+        cell.rediscovered = true;
+        cell.flag = null;
+        cell.revealed = true;
+        state.score.rediscovered++;
+        state.score.bonus += 3;
+        state.score.catalogued++;
+        state.score.lost = Math.max(0, state.score.lost - 1); // undo the loss
+        state.discoveredSpecies.add(cell.species.id);
+        rediscoveryList.push(cell.species.name);
+      }
+    }
+  }
+  if (rediscoveryList.length > 0) {
+    playSFX('rediscovery');
+  }
+  renderGrid();
+
+  const score = calculateScore();
+  const body = document.getElementById('scoreboard-body');
+
+  let rediscoveryHTML = '';
+  if (rediscoveryList.length > 0) {
+    rediscoveryHTML = `<div class="score-row" style="color:var(--safe);"><span>✨ Rediscovered species</span><strong>${rediscoveryList.join(', ')}</strong></div>`;
+  }
+
+  body.innerHTML = `
+    <div class="score-row"><span>Butterflies catalogued</span><strong>${state.score.catalogued}</strong></div>
+    <div class="score-row"><span>Wrongly declared extinct (lost)</span><strong>${state.score.lost}</strong></div>
+    <div class="score-row"><span>Rediscoveries</span><strong>${state.score.rediscovered}</strong></div>
+    <div class="score-row"><span>Rediscovery bonuses</span><strong>+${state.score.bonus}</strong></div>
+    ${rediscoveryHTML}
+    <div class="score-row"><span>Final score</span><strong>${score}</strong></div>
+  `;
+
+  document.getElementById('real-totals').innerHTML = `
+    <strong>Real Singapore totals:</strong> ${REAL_EXTANT} extant species, ${REAL_EXTIRPATED} extirpated (per Jain et al. 2018).
+    <br>You catalogued ${state.score.catalogued} on this site — the real survey at ${site.name} recorded ${site.speciesRecord} species.
+  `;
+
+  document.getElementById('closing-note').textContent =
+    'Conservation is half about noticing the dull, overlooked ones — the exact idea the cryptic-species mechanic was built around.';
+
+  document.getElementById('scoreboard-overlay').classList.add('active');
+  saveSettings();
+}
+
+// ---- Codex ----
+function renderCodex() {
+  const grid = document.getElementById('codex-grid');
+  grid.innerHTML = '';
+  for (const sp of SPECIES_DATA) {
+    const discovered = state.discoveredSpecies.has(sp.id);
+    const card = document.createElement('div');
+    card.className = `codex-card ${discovered ? 'discovered' : 'locked'}`;
+    card.innerHTML = `
+      <div class="butterfly-emoji">${discovered ? sp.emoji : '❓'}</div>
+      <div class="butterfly-name">${discovered ? sp.name : '???'}</div>
+      <div class="butterfly-status">${discovered ? (sp.status === 'cryptic' ? 'Cryptic' : sp.status === 'common' ? 'Common' : 'Uncommon') : 'Undiscovered'}</div>
+      ${discovered ? `<div class="butterfly-source">Source: ${sp.source}</div>` : ''}
+    `;
+    grid.appendChild(card);
+  }
+}
+
+// ---- Settings UI ----
+function applySettingsToDOM() {
+  document.documentElement.style.setProperty('--font-scale', state.textSize / 100);
+  document.body.classList.toggle('colour-blind', state.colourBlind);
+  document.body.classList.toggle('reduced-motion', state.reducedMotion);
+
+  const gs = document.getElementById('set-gridsize');
+  if (gs) gs.value = state.gridSize;
+  const ts = document.getElementById('set-textsize');
+  if (ts) {
+    ts.value = state.textSize;
+    document.getElementById('textsize-val').textContent = state.textSize + '%';
+  }
+  document.getElementById('set-colourblind').checked = state.colourBlind;
+  document.getElementById('set-reducedmotion').checked = state.reducedMotion;
+  document.getElementById('set-audio').checked = state.audioEnabled;
+  document.getElementById('set-easycryptic').checked = state.easyCryptic;
+}
+
+function syncSettingsFromUI() {
+  state.gridSize = parseInt(document.getElementById('set-gridsize').value);
+  state.textSize = parseInt(document.getElementById('set-textsize').value);
+  state.colourBlind = document.getElementById('set-colourblind').checked;
+  state.reducedMotion = document.getElementById('set-reducedmotion').checked;
+  state.audioEnabled = document.getElementById('set-audio').checked;
+  state.easyCryptic = document.getElementById('set-easycryptic').checked;
+  applySettingsToDOM();
+  saveSettings();
+}
+
+// ---- Start/restart level ----
+function startLevel() {
+  generateGrid();
+  state.cursor = { r: 0, c: 0 };
+  renderGrid();
+  updateSiteCard();
+  updateUndoButton();
+  saveSettings();
+}
+
+function nextSite() {
+  state.siteIndex = (state.siteIndex + 1) % SITES.length;
+  document.getElementById('scoreboard-overlay').classList.remove('active');
+  startLevel();
+}
+
+function replaySite() {
+  document.getElementById('scoreboard-overlay').classList.remove('active');
+  startLevel();
+}
+
+// ---- Init ----
+function init() {
+  loadSettings();
+  applySettingsToDOM();
+
+  // Tool buttons
+  document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => setTool(btn.dataset.tool));
+  });
+
+  // Header buttons
+  document.getElementById('btn-codex').addEventListener('click', () => {
+    renderCodex();
+    document.getElementById('codex-overlay').classList.add('active');
+  });
+  document.getElementById('btn-close-codex').addEventListener('click', () => {
+    document.getElementById('codex-overlay').classList.remove('active');
+  });
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    applySettingsToDOM();
+    document.getElementById('settings-overlay').classList.add('active');
+  });
+  document.getElementById('btn-close-settings').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.remove('active');
+  });
+  document.getElementById('btn-apply-settings').addEventListener('click', () => {
+    syncSettingsFromUI();
+    document.getElementById('settings-overlay').classList.remove('active');
+    startLevel();
+  });
+  document.getElementById('btn-help').addEventListener('click', () => {
+    document.getElementById('help-overlay').classList.add('active');
+  });
+  document.getElementById('btn-close-help').addEventListener('click', () => {
+    document.getElementById('help-overlay').classList.remove('active');
+  });
+
+  // Text size slider live update
+  document.getElementById('set-textsize').addEventListener('input', (e) => {
+    document.getElementById('textsize-val').textContent = e.target.value + '%';
+    document.documentElement.style.setProperty('--font-scale', e.target.value / 100);
+  });
+
+  // Scoreboard buttons
+  document.getElementById('btn-next-site').addEventListener('click', nextSite);
+  document.getElementById('btn-replay-site').addEventListener('click', replaySite);
+
+  // Undo & restart
+  document.getElementById('btn-undo').addEventListener('click', undo);
+  document.getElementById('btn-restart').addEventListener('click', startLevel);
+
+  // Keyboard
+  document.addEventListener('keydown', handleKeyDown);
+
+  // Prevent context menu on grid
+  document.getElementById('grid').addEventListener('contextmenu', e => e.preventDefault());
+
+  // Close overlays on backdrop click
+  document.querySelectorAll('.overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay && overlay.id !== 'scoreboard-overlay') {
+        overlay.classList.remove('active');
+      }
+    });
+  });
+
+  startLevel();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
