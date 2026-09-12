@@ -1706,6 +1706,45 @@ function init() {
   startLevel();
 }
 
+// ---- Automation debug bridge (used by the testing bench) ----
+window.__gameDebug = {
+  getState() {
+    const flat = [];
+    for (const row of state.grid) for (const cell of row) flat.push(cell);
+    return JSON.parse(JSON.stringify({
+      gridSize: state.gridSize,
+      siteIndex: state.siteIndex,
+      siteName: SITES[state.siteIndex].name,
+      activeTool: state.activeTool,
+      cursor: state.cursor,
+      gameOver: state.gameOver,
+      firstReveal: state.firstReveal,
+      score: state.score,
+      totalButterflies: flat.filter(c => c.isButterfly).length,
+      flaggedCryptic: flat.filter(c => c.flag === 'cryptic').length,
+      markedExtinct: flat.filter(c => c.flag === 'extinct').length,
+      grid: state.grid.map(row => row.map(cell => ({
+        r: cell.r, c: cell.c, isEdge: cell.isEdge, isButterfly: cell.isButterfly,
+        isCryptic: cell.isCryptic, revealed: cell.revealed, flag: cell.flag, hint: cell.hint,
+        rediscovered: cell.rediscovered, markedAbsent: cell.markedAbsent
+      })))
+    }));
+  },
+  reveal(r, c) { revealCell(r, c); },
+  flagCryptic(r, c) { flagCryptic(r, c); },
+  markExtinct(r, c) { markExtinct(r, c); },
+  setTool(tool) { setTool(tool); },
+  restart() { startLevel(); },
+  moveCursor(r, c) {
+    state.cursor = {
+      r: Math.max(0, Math.min(state.gridSize - 1, r)),
+      c: Math.max(0, Math.min(state.gridSize - 1, c))
+    };
+    renderGrid();
+  },
+  nextSite() { nextSite(); }
+};
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
